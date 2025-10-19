@@ -1,133 +1,281 @@
-# TheNestle — Backend
+// ...existing code...
+# TheNestle — Полный стек (Backend + Frontend)
 
-FastAPI-бэкенд для проекта TheNestle. Проект рассчитан на запуск в Docker (production) и локально для разработки. Предоставляет REST API с документацией OpenAPI, миграции БД и готовые настройки для контейнеризации.
+Монорепозиторий проекта TheNestle: FastAPI-бэкенд и SPA-фронтенд. Предназначен для запуска локально в режиме разработки и в контейнерах через Docker / Docker Compose для production.
+
+## Кратко
+- Backend: FastAPI, Uvicorn, PostgreSQL, Alembic (миграции)
+- Frontend: React (Vite) / TypeScript (или выбранный стек), CSS-фреймворк (Tailwind/Bootstrap) по желанию
+- Контейнеризация: Docker + Docker Compose
+- Тесты: pytest на бекенде, jest/vitest на фронтенде (если настроено)
 
 ## Стек технологий
-- Python 3.11+
-- FastAPI
-- Uvicorn (ASGI)
-- SQLAlchemy / databases / Alembic
-- PostgreSQL (production)
-- Docker & Docker Compose
-- Pytest, httpx для тестов
-
-## Возможности
-- JSON REST API с автогенерируемой документацией (/docs, /redoc)
-- Миграции через Alembic
-- Контейнеризация через Docker + Compose
-- Health и readiness endpoints
-- Конфигурация через переменные окружения
-
-## Требования
-- Docker >= 20.x
-- Docker Compose (v2) или встроенный compose в Docker CLI
-- (опционально) Python 3.11, pip, virtualenv для локальной разработки
+- Backend: Python 3.11+, FastAPI, SQLAlchemy / databases, Alembic, Uvicorn
+- Frontend: React + Vite, TypeScript (рекомендуется), axios / fetch, Tailwind / CSS
+- DB: PostgreSQL
+- Dev: Docker, docker-compose, pytest, httpx (интеграционные тесты)
 
 ## Быстрый старт (Docker Compose)
-1. Скопировать пример env:
+1. Скопировать пример env-файлов:
    cp .env.example .env
-2. Отредактировать `.env` (DATABASE_URL, SECRET_KEY и т.д.).
-3. Запустить сервисы:
+   cp frontend/.env.example frontend/.env
+2. Настроить значения (DATABASE_URL, VITE_API_URL, SECRET_KEY и т.д.)
+3. Запустить все сервисы:
    docker compose up --build
 4. Открыть в браузере:
-   - Документация: http://localhost:8000/docs
-   - OpenAPI JSON: http://localhost:8000/openapi.json
+   - Фронтенд: http://localhost:3000 (или порт, указанный в docker-compose)
+   - API docs: http://localhost:8000/docs
    - Health: http://localhost:8000/health
 
-Запустить в фоне:
+В фоне:
    docker compose up -d --build
 
-Остановить и удалить контейнеры:
+Остановить и удалить:
    docker compose down
 
-## Запуск одного контейнера (Docker)
-Сборка образа:
-   docker build -t thenestle-backend:latest .
+## Backend (существенное)
+- Запуск локально:
+   python -m venv .venv
+   .venv\Scripts\activate  (Windows)
+   source .venv/bin/activate  (Linux/macOS)
+   pip install -r requirements-dev.txt
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+- Миграции:
+   alembic revision --autogenerate -m "описание"
+   alembic upgrade head
+- Основные эндпойнты:
+   - GET /health — простой healthcheck
+   - GET /ready — readiness (проверка БД)
 
-Пример запуска:
-   docker run --env-file .env -p 8000:8000 thenestle-backend:latest
+## Frontend (существенное)
+- Переменные окружения: frontend/.env (пример .env.example)
+  - VITE_API_URL=http://localhost:8000/api
+- Локальная разработка (пример для npm):
+   cd frontend
+   npm install
+   npm run dev
+- Сборка для продакшн:
+   npm run build
+- Запуск собранного фронтенда в Docker:
+   - В docker-compose обычно_service `web` собирает фронтенд-статические файлы и отдаёт через nginx или встроенный static-server.
 
 ## Переменные окружения (пример)
-Рекомендуется иметь `.env.example` в репозитории:
+Backend:
 - DATABASE_URL=postgresql://user:pass@db:5432/the_nestle
 - FASTAPI_ENV=production|development
 - SECRET_KEY=изменить_на_секрет
 - PORT=8000
 - WORKERS=2
 
-## База данных и миграции
-- Миграции управляются Alembic.
-- Создать ревизию:
-   alembic revision --autogenerate -m "описание"
-- Применить миграции:
-   alembic upgrade head
+Frontend (frontend/.env):
+- VITE_API_URL=http://localhost:8000
 
-В Compose миграции обычно выполняются через entrypoint-скрипт или через Makefile (`make migrate`).
+## Docker / Docker Compose (рекомендации)
+- docker-compose.yml должен определять минимум сервисов:
+  - api — бекенд (build из /backend)
+  - web — фронтенд (build из /frontend или отдача статичных файлов через nginx)
+  - db — postgres
+  - optional: migrate (выполнение alembic при старте)
+- В production используйте multi-stage Dockerfile для фронтенда и бекенда.
 
-## Локальная разработка
-Windows (cmd/powershell):
-   python -m venv .venv
-   .venv\Scripts\activate
-Linux/macOS:
-   python -m venv .venv
-   source .venv/bin/activate
-
-Установка зависимостей:
-   pip install -r requirements-dev.txt
-
-Запуск приложения в режиме разработки:
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+## Локальная разработка (совместно)
+- Запуск бекенда локально и фронтенда через Vite: фронтенд должен направлять запросы на VITE_API_URL (proxy при dev).
+- Для интеграционных тестов можно поднять docker-compose с тестовой БД и запускать pytest с переменной окружения TEST_DATABASE_URL.
 
 ## Тестирование
-Запуск тестов:
+- Backend: pytest, httpx для тестовых запросов
+- Frontend: jest/vitest (в зависимости от стека)
+Запуск:
    pytest
+   npm test (в фронтенде)
 
-Используйте отдельную тестовую БД (переменные окружения) чтобы не повредить данные продакшна.
+## CI / CD
+- Шаги: lint -> test -> build -> migrate -> deploy
+- В CI: использовать отдельную тестовую БД, кеширование зависимостей и multi-stage сборку образов.
 
 ## Форматирование и линтинг
-- Форматирование: black, isort
-- Линтинг: flake8
-
+- Backend: black, isort, flake8
+- Frontend: prettier, eslint
 Примеры:
    black .
    isort .
    flake8
-
-## Healthcheck и Readiness
-Рекомендуется иметь минимальные эндпойнты:
-- GET /health — возвращает 200 OK
-- GET /ready — проверяет доступность БД и других зависимостей
-
-## Логирование и мониторинг
-- В production рекомендуется структурированное логирование (JSON).
-- При необходимости — экспорт метрик Prometheus.
+   npm run lint (во frontend)
 
 ## Структура проекта (пример)
-- app/
-  - main.py
-  - api/
-  - core/
-  - models/
-  - schemas/
-  - crud/
-  - db/
-  - tests/
-- alembic/
-- Dockerfile
+- backend/  (или app/)
+  - app/
+    - main.py
+    - api/
+    - core/
+    - models/
+    - schemas/
+    - crud/
+    - db/
+    - tests/
+  - alembic/
+  - Dockerfile
+  - requirements.txt
+- frontend/
+  - package.json
+  - src/
+  - public/
+  - Dockerfile
 - docker-compose.yml
 - .env.example
-- requirements.txt
+- README.md
+- LICENSE
+
+## Рекомендации по безопасности
+- Не хранить секреты в репозитории
+- Использовать секреты Docker / переменные окружения на CI/CD
+- Ограничить CORS и включить HTTPs в продакшне (reverse-proxy)
+
+## Вклад
+- Использовать ветвевую стратегию (GitFlow/feature-branches)
+- Писать тесты для новых фич
+- Малые и осмысленные PR
+
+## Лицензия
+Указать лицензию в файле LICENSE репозитория.
+```// filepath: c:\Users\markld\Desktop\1\Work\myProjects\TheNestle\README.md
+// ...existing code...
+# TheNestle — Полный стек (Backend + Frontend)
+
+Монорепозиторий проекта TheNestle: FastAPI-бэкенд и SPA-фронтенд. Предназначен для запуска локально в режиме разработки и в контейнерах через Docker / Docker Compose для production.
+
+## Кратко
+- Backend: FastAPI, Uvicorn, PostgreSQL, Alembic (миграции)
+- Frontend: React (Vite) / TypeScript (или выбранный стек), CSS-фреймворк (Tailwind/Bootstrap) по желанию
+- Контейнеризация: Docker + Docker Compose
+- Тесты: pytest на бекенде, jest/vitest на фронтенде (если настроено)
+
+## Стек технологий
+- Backend: Python 3.11+, FastAPI, SQLAlchemy / databases, Alembic, Uvicorn
+- Frontend: React + Vite, TypeScript (рекомендуется), axios / fetch, Tailwind / CSS
+- DB: PostgreSQL
+- Dev: Docker, docker-compose, pytest, httpx (интеграционные тесты)
+
+## Быстрый старт (Docker Compose)
+1. Скопировать пример env-файлов:
+   cp .env.example .env
+   cp frontend/.env.example frontend/.env
+2. Настроить значения (DATABASE_URL, VITE_API_URL, SECRET_KEY и т.д.)
+3. Запустить все сервисы:
+   docker compose up --build
+4. Открыть в браузере:
+   - Фронтенд: http://localhost:3000 (или порт, указанный в docker-compose)
+   - API docs: http://localhost:8000/docs
+   - Health: http://localhost:8000/health
+
+В фоне:
+   docker compose up -d --build
+
+Остановить и удалить:
+   docker compose down
+
+## Backend (существенное)
+- Запуск локально:
+   python -m venv .venv
+   .venv\Scripts\activate  (Windows)
+   source .venv/bin/activate  (Linux/macOS)
+   pip install -r requirements-dev.txt
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+- Миграции:
+   alembic revision --autogenerate -m "описание"
+   alembic upgrade head
+- Основные эндпойнты:
+   - GET /health — простой healthcheck
+   - GET /ready — readiness (проверка БД)
+
+## Frontend (существенное)
+- Переменные окружения: frontend/.env (пример .env.example)
+  - VITE_API_URL=http://localhost:8000/api
+- Локальная разработка (пример для npm):
+   cd frontend
+   npm install
+   npm run dev
+- Сборка для продакшн:
+   npm run build
+- Запуск собранного фронтенда в Docker:
+   - В docker-compose обычно_service `web` собирает фронтенд-статические файлы и отдаёт через nginx или встроенный static-server.
+
+## Переменные окружения (пример)
+Backend:
+- DATABASE_URL=postgresql://user:pass@db:5432/the_nestle
+- FASTAPI_ENV=production|development
+- SECRET_KEY=изменить_на_секрет
+- PORT=8000
+- WORKERS=2
+
+Frontend (frontend/.env):
+- VITE_API_URL=http://localhost:8000
+
+## Docker / Docker Compose (рекомендации)
+- docker-compose.yml должен определять минимум сервисов:
+  - api — бекенд (build из /backend)
+  - web — фронтенд (build из /frontend или отдача статичных файлов через nginx)
+  - db — postgres
+  - optional: migrate (выполнение alembic при старте)
+- В production используйте multi-stage Dockerfile для фронтенда и бекенда.
+
+## Локальная разработка (совместно)
+- Запуск бекенда локально и фронтенда через Vite: фронтенд должен направлять запросы на VITE_API_URL (proxy при dev).
+- Для интеграционных тестов можно поднять docker-compose с тестовой БД и запускать pytest с переменной окружения TEST_DATABASE_URL.
+
+## Тестирование
+- Backend: pytest, httpx для тестовых запросов
+- Frontend: jest/vitest (в зависимости от стека)
+Запуск:
+   pytest
+   npm test (в фронтенде)
 
 ## CI / CD
-Рекомендации:
-- Сборка образа, запуск тестов, применение миграций, деплой
-- Мультистадийный Dockerfile для уменьшения размера образа
-- Сканы безопасности зависимостей и образов
+- Шаги: lint -> test -> build -> migrate -> deploy
+- В CI: использовать отдельную тестовую БД, кеширование зависимостей и multi-stage сборку образов.
 
-## Вклад и правила
-- Следовать принятой ветвевой стратегии (GitFlow или аналог)
-- Добавлять тесты для новых фич
-- Держать PR небольшими и сфокусированными
+## Форматирование и линтинг
+- Backend: black, isort, flake8
+- Frontend: prettier, eslint
+Примеры:
+   black .
+   isort .
+   flake8
+   npm run lint (во frontend)
+
+## Структура проекта (пример)
+- backend/  (или app/)
+  - app/
+    - main.py
+    - api/
+    - core/
+    - models/
+    - schemas/
+    - crud/
+    - db/
+    - tests/
+  - alembic/
+  - Dockerfile
+  - requirements.txt
+- frontend/
+  - package.json
+  - src/
+  - public/
+  - Dockerfile
+- docker-compose.yml
+- .env.example
+- README.md
+- LICENSE
+
+## Рекомендации по безопасности
+- Не хранить секреты в репозитории
+- Использовать секреты Docker / переменные окружения на CI/CD
+- Ограничить CORS и включить HTTPs в продакшне (reverse-proxy)
+
+## Вклад
+- Использовать ветвевую стратегию (GitFlow/feature-branches)
+- Писать тесты для новых фич
+- Малые и осмысленные PR
 
 ## Лицензия
 Указать лицензию в файле LICENSE репозитория.
