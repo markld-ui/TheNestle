@@ -5,12 +5,45 @@ services:
       dockerfile: ./backend/Dockerfile
     image: nestle_backend_image:latest
     ports:
-      - "1221:8000"
+      - "8000:${BACKEND_PORT}"
     volumes:
       - ./backend:/app
     environment:
-      - PYTHONPATH=/app/src
-      - ENVIRONMENT=development
+      - PYTHONPATH=${PYTHONPATH}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nestle_network
     container_name: nestle_backend
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn src.main:app --host 0.0.0.0 --port ${BACKEND_PORT} --reload
     restart: unless-stopped
+
+  db:
+    image: postgres:16.0
+    container_name: nestle_postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - nestle_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  nestle_network:
+    driver: bridge
