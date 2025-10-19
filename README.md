@@ -1,4 +1,3 @@
-// ...existing code...
 # TheNestle — Полный стек (Backend + Frontend)
 
 Монорепозиторий проекта TheNestle: FastAPI-бэкенд и SPA-фронтенд. Предназначен для запуска локально в режиме разработки и в контейнерах через Docker / Docker Compose для production.
