@@ -165,8 +165,8 @@ Frontend (frontend/.env):
    docker compose up --build
 4. Открыть в браузере:
    - Фронтенд: http://localhost:3000 (или порт, указанный в docker-compose)
-   - API docs: http://localhost:8000/docs
-   - Health: http://localhost:8000/health
+   - API docs: http://localhost:1221/docs
+   - Health: http://localhost:1221/health
 
 В фоне:
    docker compose up -d --build
@@ -256,13 +256,13 @@ Frontend (frontend/.env):
     - tests/
   - alembic/
   - Dockerfile
-  - requirements.txt
 - frontend/
   - package.json
   - src/
   - public/
   - Dockerfile
 - docker-compose.yml
+- requirements.txt
 - .env.example
 - README.md
 - LICENSE
