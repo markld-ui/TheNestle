@@ -6,14 +6,27 @@ from api.users_endpoints import router as users_router
 
 from contextlib import asynccontextmanager
 from database import create_tables, delete_tables
+import asyncio
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-   await create_tables()
-   print("База готова")
-   yield
-   await delete_tables()
-   print("База очищена")
+    try:
+        await create_tables()
+        print("База готова")
+    except Exception as e:
+        print(f"Ошибка при инициализации базы: {e}")
+        # Можно добавить задержку для переподключения
+        await asyncio.sleep(5)
+        await create_tables()
+    
+    yield
+    
+    try:
+        await delete_tables()
+        print("База очищена")
+    except Exception as e:
+        print(f"Ошибка при очистке базы: {e}")
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
